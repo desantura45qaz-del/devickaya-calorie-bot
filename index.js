@@ -1,154 +1,132 @@
-// index.js
-// Бот Devickaya: WebApp калькулятор + дневник питания
+// =============== НАСТРОЙКА БОТА ===============
 
 const TelegramBot = require("node-telegram-bot-api");
 
-// 🔐 Токен и WebApp URL берём из переменных окружения
-const token = process.env.BOT_TOKEN;
-const WEBAPP_URL =
-  process.env.WEBAPP_URL || "https://miniappcalors-web.vercel.app";
+// ВСТАВЬ СВОЙ ТОКЕН ❗❗❗
+const TOKEN = "7719183383:AAEXyt9c15ln552uFzz_gCcxSyfsAsU8p7o";
 
-if (!token) {
-  console.error("❌ BOT_TOKEN не задан. Укажи его в Environment Variables.");
-  process.exit(1);
-}
-
-const bot = new TelegramBot(token, { polling: true });
-
-/*
-  🔥 Кнопка в нижнем меню Telegram — открывает WebApp без /start
-*/
-bot.setChatMenuButton({
-  menu_button: {
-    type: "web_app",
-    text: "Калькулятор Devickaya",
-    web_app: { url: WEBAPP_URL },
-  },
+const bot = new TelegramBot(TOKEN, {
+  polling: true
 });
 
-// Команда /start — просто приветствие (не обязательно)
+console.log("Bot started...");
+
+
+// =============== ОБРАБОТКА /start ===============
+
 bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-
-  bot.sendMessage(
-    chatId,
-    "Привет! 🌸\n\n" +
-      "Используй кнопку «Калькулятор Devickaya» внизу чата.\n" +
-      "Или нажми кнопку ниже 👇",
-    {
-      reply_markup: {
-        keyboard: [
-          [
-            {
-              text: "Открыть калькулятор",
-              web_app: { url: WEBAPP_URL },
-            },
-          ],
-        ],
-        resize_keyboard: true,
-      },
-    }
-  );
-});
-
-// Основной обработчик данных из WebApp
-bot.on("message", (msg) => {
-  if (!msg.web_app_data) return;
-
-  let payload;
-
-  try {
-    payload = JSON.parse(msg.web_app_data.data);
-  } catch (err) {
-    bot.sendMessage(msg.chat.id, "Ошибка обработки данных 😔");
-    return;
-  }
-
-  const type = payload.type;
-
-  console.log("Получены данные:", payload);
-
-  // === 1. БЛЮДО В ДНЕВНИК ===
-  if (type === "meal_log_entry") {
-    const meal = payload.meal || {};
-    const ts = payload.timestamp;
-
-    let timeStr = "время не указано";
-    if (ts) {
-      const dt = new Date(ts);
-      timeStr = `${dt.toLocaleDateString()} ${dt.getHours()}:${dt.getMinutes()}`;
-    }
-
-    const name = meal.name || "Блюдо";
-    const kcal100 = meal.kcal_per_100g;
-    const weight_g = meal.weight_g;
-    const totalKcal = meal.total_kcal;
-
-    const per100 = meal.macros_per_100 || {};
-    const portion = meal.macros_portion || {};
-
-    let text = "🍽 <b>Блюдо добавлено в дневник</b>\n\n";
-    text += `<b>${name}</b>\n${timeStr}\n\n`;
-    text += `Порция: <b>${weight_g} г</b>\n`;
-    text += `Ккал порции: <b>${totalKcal}</b>\n`;
-    if (kcal100 != null) text += `Ккал на 100 г: <b>${kcal100}</b>\n`;
-
-    if (
-      per100.protein != null ||
-      per100.fats != null ||
-      per100.carbs != null
-    ) {
-      text += "\nНа 100 г:\n";
-      if (per100.protein != null) text += `• Белки: ${per100.protein} г\n`;
-      if (per100.fats != null) text += `• Жиры: ${per100.fats} г\n`;
-      if (per100.carbs != null) text += `• Углеводы: ${per100.carbs} г\n`;
-    }
-
-    if (
-      portion.protein != null ||
-      portion.fats != null ||
-      portion.carbs != null
-    ) {
-      text += "\nНа порцию:\n";
-      if (portion.protein != null)
-        text += `• Белки: ~${portion.protein} г\n`;
-      if (portion.fats != null) text += `• Жиры: ~${portion.fats} г\n`;
-      if (portion.carbs != null)
-        text += `• Углеводы: ~${portion.carbs} г\n`;
-    }
-
-    bot.sendMessage(msg.chat.id, text, { parse_mode: "HTML" });
-    return;
-  }
-
-  // === 2. СУТОЧНАЯ НОРМА ===
-  if (type === "calorie_result_daily") {
-    const d = payload.data;
-
-    let text = "📊 <b>Суточная норма</b>\n\n";
-    text += `Поддержание веса: <b>${d.maintenance} ккал</b>\n`;
-    text += `Твоя норма: <b>${d.target} ккал</b>\n\n`;
-
-    text += "БЖУ:\n";
-    text += `• Белки: ${d.protein} г\n`;
-    text += `• Жиры: ${d.fats} г\n`;
-    text += `• Углеводы: ${d.carbs} г\n`;
-
-    bot.sendMessage(msg.chat.id, text, { parse_mode: "HTML" });
-    return;
-  }
-
-  // === 3. КАРТОЧКА СТОРИС ===
-  if (type === "story_card") {
-    bot.sendMessage(
-      msg.chat.id,
-      "🖼 Твоя карточка готова!\nСохрани её как изображение и загрузи в сторис 💜"
-    );
-    return;
-  }
-
   bot.sendMessage(
     msg.chat.id,
-    `Получен неизвестный тип данных: ${type}`
+    "Привет! Я бот Devickaya 💜\n" +
+    "Здесь будет твой дневник питания, калорийность блюд и рекомендации.\n\n" +
+    "Открой мини-приложение кнопкой ниже 👇",
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Открыть мини-приложение",
+              web_app: { url: "https://miniappcalors-web.vercel.app" } // 🔗 ВСТАВЬ СВОЙ URL
+            }
+          ]
+        ]
+      }
+    }
   );
 });
+
+
+// =============== ПОЛУЧЕНИЕ ДАННЫХ ИЗ MINI-APP ===============
+
+bot.on("message", async (msg) => {
+  if (!msg.web_app_data) return;
+
+  try {
+    const payload = JSON.parse(msg.web_app_data.data);
+    const type = payload.type;
+
+    // == 1. Запись блюда ==
+    if (type === "meal_log_entry") {
+      const meal = payload.meal;
+
+      const name = meal.name;
+      const weight = meal.weight_g;
+      const kcal = meal.total_kcal;
+      const kcal100 = meal.kcal_per_100g;
+      const m100 = meal.macros_per_100;
+      const mp = meal.macros_portion;
+
+      let text = `🍽 <b>Блюдо добавлено в дневник</b>\n\n`;
+      text += `<b>${name}</b>\n`;
+      text += `Порция: <b>${weight} г</b>\n`;
+      text += `Калорийность порции: <b>${kcal} ккал</b>\n\n`;
+
+      if (kcal100 != null) text += `Ккал на 100 г: <b>${kcal100}</b>\n`;
+
+      text += `\n<b>БЖУ на 100 г:</b>\n`;
+      text += `• Белки: ${m100.protein} г\n`;
+      text += `• Жиры: ${m100.fats} г\n`;
+      text += `• Углеводы: ${m100.carbs} г\n`;
+
+      text += `\n<b>БЖУ на порцию:</b>\n`;
+      text += `• Белки: ~${mp.protein} г\n`;
+      text += `• Жиры: ~${mp.fats} г\n`;
+      text += `• Углеводы: ~${mp.carbs} г`;
+
+      bot.sendMessage(msg.chat.id, text, { parse_mode: "HTML" });
+
+      return;
+    }
+
+    // == 2. Суточная норма ==
+    if (type === "calorie_result_daily") {
+      const d = payload.data;
+
+      let text = `📊 <b>Суточная норма</b>\n\n`;
+      text += `Поддержание веса: ~ <b>${d.maintenance}</b> ккал\n`;
+      text += `Рекомендуемая норма: <b>${d.target}</b> ккал/день\n\n`;
+
+      text += `<b>Ориентировочные макросы:</b>\n`;
+      text += `• Белки: <b>${d.protein}</b> г\n`;
+      text += `• Жиры: <b>${d.fats}</b> г\n`;
+      text += `• Углеводы: <b>${d.carbs}</b> г`;
+
+      bot.sendMessage(msg.chat.id, text, { parse_mode: "HTML" });
+
+      return;
+    }
+
+    // == 3. Карточка для сторис ==
+    if (type === "story_card") {
+      bot.sendMessage(
+        msg.chat.id,
+        "🖼 Твоя карточка готова!\nСохрани её как изображение и загрузи в сторис 💜"
+      );
+      return;
+    }
+
+    // == 4. Неизвестный тип данных ==
+    bot.sendMessage(
+      msg.chat.id,
+      `Получен неизвестный тип данных: ${type}`
+    );
+
+  } catch (err) {
+    console.error("Ошибка обработки WebApp данных:", err);
+  }
+});
+
+
+// =============== HTTP-СЕРВЕР ДЛЯ RENDER ===============
+
+const http = require("http");
+const PORT = process.env.PORT || 3000;
+
+http
+  .createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("Devickaya calorie bot is running\n");
+  })
+  .listen(PORT, () => {
+    console.log(`HTTP server for healthcheck listening on port ${PORT}`);
+  });
